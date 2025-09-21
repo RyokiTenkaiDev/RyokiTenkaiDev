@@ -1,0 +1,211 @@
+local player = game.Players.LocalPlayer
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "WaypointMenu"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 200)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "Waypoint Menu"
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+title.Parent = mainFrame
+
+local inputName = Instance.new("TextBox")
+inputName.PlaceholderText = "Nome do waypoint"
+inputName.Size = UDim2.new(0.9, 0, 0, 30)
+inputName.Position = UDim2.new(0.05, 0, 0, 40)
+inputName.BackgroundColor3 = Color3.fromRGB(45,45,45)
+inputName.TextColor3 = Color3.new(1,1,1)
+inputName.ClearTextOnFocus = false
+inputName.Parent = mainFrame
+
+local saveButton = Instance.new("TextButton")
+saveButton.Size = UDim2.new(0.4, 0, 0, 30)
+saveButton.Position = UDim2.new(0.05, 0, 0, 80)
+saveButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+saveButton.TextColor3 = Color3.new(1,1,1)
+saveButton.Text = "Salvar Waypoint"
+saveButton.Parent = mainFrame
+
+local tpButton = Instance.new("TextButton")
+tpButton.Size = UDim2.new(0.4, 0, 0, 30)
+tpButton.Position = UDim2.new(0.55, 0, 0, 80)
+tpButton.BackgroundColor3 = Color3.fromRGB(34, 139, 34)
+tpButton.TextColor3 = Color3.new(1,1,1)
+tpButton.Text = "Teleportar"
+tpButton.Parent = mainFrame
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 0, 40)
+statusLabel.Position = UDim2.new(0, 0, 0, 120)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.new(1, 1, 1)
+statusLabel.TextWrapped = true
+statusLabel.Text = ""
+statusLabel.Parent = mainFrame
+
+local watermark = Instance.new("TextLabel")
+watermark.Size = UDim2.new(0, 200, 0, 30)
+watermark.Position = UDim2.new(1, -210, 1, -40)
+watermark.BackgroundTransparency = 1
+watermark.Text = "RyokiDev"
+watermark.TextColor3 = Color3.fromRGB(255, 0, 0)
+watermark.TextStrokeTransparency = 0.5
+watermark.TextScaled = true
+watermark.Font = Enum.Font.SourceSansBold
+watermark.ZIndex = 10
+watermark.Parent = screenGui
+
+local waypoints = {}
+
+local function updateStatus(text)
+    statusLabel.Text = text
+    task.delay(3, function()
+        if statusLabel.Text == text then
+            statusLabel.Text = ""
+        end
+    end)
+end
+
+saveButton.MouseButton1Click:Connect(function()
+    local name = inputName.Text:match("^%s*(.-)%s*$")
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        updateStatus("Personagem não encontrado!")
+        return
+    end
+    if name == "" then
+        updateStatus("Digite um nome válido!")
+        return
+    end
+    waypoints[name] = char.HumanoidRootPart.CFrame
+    updateStatus("Waypoint '"..name.."' salvo!")
+end)
+
+tpButton.MouseButton1Click:Connect(function()
+    local name = inputName.Text:match("^%s*(.-)%s*$")
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then
+        updateStatus("Personagem não encontrado!")
+        return
+    end
+    if waypoints[name] then
+        char.HumanoidRootPart.CFrame = waypoints[name]
+        updateStatus("Teleportado para '"..name.."'!")
+    else
+        updateStatus("Waypoint '"..name.."' não existe!")
+    end
+end)
+
+local UserInputService = game:GetService("UserInputService")
+
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
+end
+
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        update(input)
+    end
+end)
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 40, 0, 40)
+toggleButton.Position = UDim2.new(0, 20, 0, 200)
+toggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.Text = "-"
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 24
+toggleButton.ZIndex = 10
+toggleButton.Parent = screenGui
+
+local panelVisible = true
+
+toggleButton.MouseButton1Click:Connect(function()
+    panelVisible = not panelVisible
+    mainFrame.Visible = panelVisible
+    toggleButton.Text = panelVisible and "-" or "+"
+end)
+
+local draggingBtn
+local dragInputBtn
+local dragStartBtn
+local startPosBtn
+
+local function updateBtn(input)
+    local delta = input.Position - dragStartBtn
+    toggleButton.Position = UDim2.new(
+        startPosBtn.X.Scale,
+        startPosBtn.X.Offset + delta.X,
+        startPosBtn.Y.Scale,
+        startPosBtn.Y.Offset + delta.Y
+    )
+end
+
+toggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingBtn = true
+        dragStartBtn = input.Position
+        startPosBtn = toggleButton.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingBtn = false
+            end
+        end)
+    end
+end)
+
+toggleButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInputBtn = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if draggingBtn and input == dragInputBtn then
+        updateBtn(input)
+    end
+end)
